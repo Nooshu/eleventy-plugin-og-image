@@ -1,0 +1,13 @@
+{
+  "name": "sprintf-js",
+  "version": "1.0.3-security.1",
+  "description": "Vendored sprintf-js with precision clamping for CVE-2026-97058 until an official fix is released",
+  "author": "Alexandru Marasteanu <hello@alexei.ro> (http://alexei.ro/)",
+  "main": "src/sprintf.js",
+  "license": "BSD-3-Clause",
+  "files": [
+    "src",
+    "LICENSE",
+    "README.md"
+  ]
+}
