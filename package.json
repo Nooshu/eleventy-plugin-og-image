@@ -89,7 +89,7 @@
     "sharp": "$sharp",
     "handlebars": "4.7.10",
     "liquidjs": "10.30.0",
-    "markdown-it": "14.3.2",
+    "markdown-it": "14.3.3",
     "linkify-it": "5.0.2",
     "brace-expansion@1": "1.1.21",
     "brace-expansion@2": "2.1.7",
