@@ -1,3 +1,28 @@
+# [1.0.0](https://github.com/Nooshu/eleventy-plugin-og-image/releases/tag/v1.0.0) (2026-10-29)
+
+
+### Features
+
+* build-scoped in-memory cache to deduplicate OG image work within a build
+* persistent OG image manifest between builds to skip regenerating unchanged images
+* `slugStrategy: 'pageUrl'` to decouple output paths from content hashes
+* `maxConcurrency` option to limit parallel OG image rendering
+* pre-computed options hash to avoid re-serializing fonts on every page
+* PNG passthrough that skips Sharp when writing default PNG output without options
+
+
+### Bug Fixes
+
+* security overrides for `markdown-it`, `undici`, `fflate`, and vendored `sprintf-js`
+* preserve `sharpOptions` through `mergeOptions`
+* handle `null` values safely in `sortObject`
+
+
+### Chores
+
+* Dependabot weekly updates for npm and GitHub Actions
+* enforce 100% line/statement/branch/function coverage in CI
+
 # [4.3.0](https://github.com/KiwiKilian/eleventy-plugin-og-image/compare/v4.2.1...v4.3.0) (2026-07-05)
 
 
