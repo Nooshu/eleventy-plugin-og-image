@@ -8,7 +8,8 @@ export function sortObject(unordered) {
   const keys = Object.keys(unordered).sort();
 
   return keys.reduce((object, key) => {
-    object[key] = typeof unordered[key] === 'object' ? sortObject(unordered[key]) : unordered[key];
+    const value = unordered[key];
+    object[key] = value !== null && typeof value === 'object' ? sortObject(value) : value;
 
     return object;
   }, {});

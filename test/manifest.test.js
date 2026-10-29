@@ -43,6 +43,28 @@ test('manifest persists entries between load and save', async (t) => {
   t.deepEqual(reloaded.get('/page/'), { dataHash: 'abc', outputFileName: 'page.png' });
 });
 
+test('manifest load starts empty when file is missing or invalid', async (t) => {
+  const dir = await createTmpDir(t);
+  const missing = new OgImageManifest(path.join(dir, 'missing.json'));
+  await missing.load();
+  t.is(missing.get('/any/'), undefined);
+
+  const invalidPath = path.join(dir, 'invalid.json');
+  await fs.writeFile(invalidPath, '{not-json', 'utf8');
+  const invalid = new OgImageManifest(invalidPath);
+  await invalid.load();
+  t.is(invalid.get('/any/'), undefined);
+});
+
+test('manifest get returns undefined for unknown pages', async (t) => {
+  const dir = await createTmpDir(t);
+  const manifest = new OgImageManifest(path.join(dir, '.og-image-manifest.json'));
+  manifest.set('/known/', { dataHash: 'abc', outputFileName: 'known.png' });
+
+  t.is(manifest.get('/unknown/'), undefined);
+  t.deepEqual(manifest.get('/known/'), { dataHash: 'abc', outputFileName: 'known.png' });
+});
+
 test('manifest entry allows resolving output filename without hashing html', async (t) => {
   const options = mergeOptions({
     directoriesConfig,

@@ -8,18 +8,36 @@
  */
 import { cpSync, existsSync, readFileSync, rmSync } from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const nested = path.join(root, 'node_modules/npm/node_modules/undici');
-const hoisted = path.join(root, 'node_modules/undici');
+/**
+ * @param {{ nestedPath?: string; hoistedPath?: string }} [paths]
+ * @returns {'patched' | 'skipped' | 'already-current'}
+ */
+export function patchBundledUndici(paths = {}) {
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+  const nested = paths.nestedPath ?? path.join(root, 'node_modules/npm/node_modules/undici');
+  const hoisted = paths.hoistedPath ?? path.join(root, 'node_modules/undici');
 
-if (existsSync(nested) && existsSync(hoisted)) {
+  if (!existsSync(nested) || !existsSync(hoisted)) {
+    return 'skipped';
+  }
+
   const nestedVersion = JSON.parse(readFileSync(path.join(nested, 'package.json'), 'utf8')).version;
   const hoistedVersion = JSON.parse(readFileSync(path.join(hoisted, 'package.json'), 'utf8')).version;
 
-  if (nestedVersion !== hoistedVersion) {
-    rmSync(nested, { recursive: true, force: true });
-    cpSync(hoisted, nested, { recursive: true });
+  if (nestedVersion === hoistedVersion) {
+    return 'already-current';
   }
+
+  rmSync(nested, { recursive: true, force: true });
+  cpSync(hoisted, nested, { recursive: true });
+
+  return 'patched';
+}
+
+const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (isMain) {
+  patchBundledUndici();
 }

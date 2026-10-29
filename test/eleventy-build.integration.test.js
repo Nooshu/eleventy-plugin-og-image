@@ -157,3 +157,115 @@ export default async function (eleventyConfig) {
   t.is(stat2.mtimeMs, stat1.mtimeMs);
 });
 
+test.serial('integration: manifest reuses output filename across builds', async (t) => {
+  const root = await mkTmpDir(t);
+  const inputDir = path.join(root, 'input');
+  const outputDir = path.join(root, '_site');
+
+  await fs.mkdir(inputDir, { recursive: true });
+  await fs.writeFile(
+    path.join(inputDir, 'og-test.og.njk'),
+    `<style>.root{width:100%;height:100%;background:#0f0;display:flex;}</style><div class="root"></div>`,
+    'utf8',
+  );
+  await fs.writeFile(
+    path.join(inputDir, 'page.njk'),
+    `<!doctype html><html><head>{% ogImage "./og-test.og.njk" %}</head><body>ok</body></html>`,
+    'utf8',
+  );
+
+  const repoRoot = path.resolve('.');
+  const configPath = path.join(root, '.eleventy.js');
+  await fs.writeFile(
+    configPath,
+    `import EleventyPluginOgImage from ${JSON.stringify(path.join(repoRoot, '.eleventy.js'))};
+export default async function (eleventyConfig) {
+  eleventyConfig.addPlugin(EleventyPluginOgImage, {
+    slugStrategy: "pageUrl",
+    outputFileExtension: "png",
+    outputDir: "og-images",
+    urlPath: "og-images",
+    previewMode: false,
+    manifest: true,
+    satoriOptions: { width: 120, height: 63, fonts: [] },
+  });
+};
+`,
+    'utf8',
+  );
+
+  const elev1 = new Eleventy(inputDir, outputDir, { configPath, quietMode: true });
+  await elev1.init();
+  await elev1.write();
+
+  const imageOutPath = path.join(outputDir, 'og-images', 'page.png');
+  const manifestPath = path.join(outputDir, 'og-images', '.og-image-manifest.json');
+
+  t.true(await pathExists(imageOutPath));
+  t.true(await pathExists(manifestPath));
+
+  const manifest1 = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
+  t.is(manifest1['/page/'].outputFileName, 'page.png');
+
+  const stat1 = await fs.stat(imageOutPath);
+  await new Promise((resolve) => {
+    setTimeout(resolve, 20);
+  });
+
+  const elev2 = new Eleventy(inputDir, outputDir, { configPath, quietMode: true });
+  await elev2.init();
+  await elev2.write();
+
+  const stat2 = await fs.stat(imageOutPath);
+  t.is(stat2.mtimeMs, stat1.mtimeMs);
+
+  const html = await fs.readFile(path.join(outputDir, 'page', 'index.html'), 'utf8');
+  t.regex(html, /content="\/og-images\/page\.png"/);
+});
+
+test.serial('integration: sharpOptions force non-passthrough png writes', async (t) => {
+  const root = await mkTmpDir(t);
+  const inputDir = path.join(root, 'input');
+  const outputDir = path.join(root, '_site');
+
+  await fs.mkdir(inputDir, { recursive: true });
+  await fs.writeFile(
+    path.join(inputDir, 'og-test.og.njk'),
+    `<style>.root{width:100%;height:100%;background:#00f;display:flex;}</style><div class="root"></div>`,
+    'utf8',
+  );
+  await fs.writeFile(
+    path.join(inputDir, 'page.njk'),
+    `<!doctype html><html><head>{% ogImage "./og-test.og.njk" %}</head><body>ok</body></html>`,
+    'utf8',
+  );
+
+  const repoRoot = path.resolve('.');
+  const configPath = path.join(root, '.eleventy.js');
+  await fs.writeFile(
+    configPath,
+    `import EleventyPluginOgImage from ${JSON.stringify(path.join(repoRoot, '.eleventy.js'))};
+export default async function (eleventyConfig) {
+  eleventyConfig.addPlugin(EleventyPluginOgImage, {
+    outputFileSlug: async () => "sharp-png",
+    outputFileExtension: "png",
+    sharpOptions: { compressionLevel: 9 },
+    outputDir: "og-images",
+    urlPath: "og-images",
+    previewMode: false,
+    satoriOptions: { width: 120, height: 63, fonts: [] },
+  });
+};
+`,
+    'utf8',
+  );
+
+  const elev = new Eleventy(inputDir, outputDir, { configPath, quietMode: true });
+  await elev.init();
+  await elev.write();
+
+  const imageOutPath = path.join(outputDir, 'og-images', 'sharp-png.png');
+  t.true(await pathExists(imageOutPath));
+  t.true((await fs.stat(imageOutPath)).size > 0);
+});
+

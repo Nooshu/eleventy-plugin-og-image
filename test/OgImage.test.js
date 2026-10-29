@@ -236,3 +236,58 @@ test('previewFilePath returns path', (t) => {
 
   t.is(ogImage.previewFilePath(), `./_site/og-images/preview/${PAGE_URL}.png`);
 });
+
+test('getCacheKey is memoized', (t) => {
+  const ogImage = new OgImage({ ...testConstructor, data: { page: { url: '/memo/' } } });
+
+  t.is(ogImage.getCacheKey(), ogImage.getCacheKey());
+});
+
+test('hash falls back to computing options hash when optionsHash is missing', async (t) => {
+  const { optionsHash, ...optionsWithoutHash } = testConstructor.options;
+  const ogImage = new OgImage({
+    ...testConstructor,
+    options: optionsWithoutHash,
+  });
+
+  const hash = await ogImage.hash();
+
+  t.regex(hash, /^[a-f0-9]{8}$/);
+});
+
+test('outputFileName returns resolvedOutputFileName when set', async (t) => {
+  const ogImage = new OgImage(testConstructor);
+  ogImage.resolvedOutputFileName = 'from-manifest.png';
+
+  t.is(await ogImage.outputFileName(), 'from-manifest.png');
+});
+
+test('hydrateFromBuildCache populates html when present', async (t) => {
+  const buildCache = new BuildCache();
+  const data = { page: { url: '/html-cache/' } };
+  const ogImageSeed = new OgImage({ ...testConstructor, data, buildCache });
+  const key = ogImageSeed.getCacheKey();
+
+  buildCache.set(key, { html: '<div class="cached-html"></div>' });
+
+  const ogImage = new OgImage({ ...testConstructor, data, buildCache });
+  t.is(await ogImage.html(), '<div class="cached-html"></div>');
+});
+
+test('hydrateFromBuildCache populates pngBuffer when present', async (t) => {
+  const buildCache = new BuildCache();
+  const data = { page: { url: '/png-cache/' } };
+  const seed = new OgImage({ ...testConstructor, data, buildCache });
+  const pngBuffer = Buffer.from('cached-png');
+
+  buildCache.set(seed.getCacheKey(), { pngBuffer });
+
+  const ogImage = new OgImage({ ...testConstructor, data, buildCache });
+  t.is(await ogImage.pngBuffer(), pngBuffer);
+});
+
+test('updateBuildCache is a no-op without a build cache', async (t) => {
+  const ogImage = new OgImage({ ...testConstructor, buildCache: undefined });
+
+  t.is(typeof (await ogImage.html()), 'string');
+});

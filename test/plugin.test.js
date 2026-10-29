@@ -440,6 +440,181 @@ test.serial('ogImage shortcode uses default OgImage when pluginOptions.OgImage i
   t.regex(result, /<meta property="og:image"/);
 });
 
+test.serial('ogImage shortcode reuses manifest entry when dataHash matches', async (t) => {
+  const stub = createEleventyConfigStub();
+  const root = await createTmpDir(t);
+
+  const inputDir = path.join(root, 'input');
+  const siteDir = path.join(root, '_site');
+  const outputDir = 'og-images';
+  const resolvedOutputDir = path.join(siteDir, outputDir);
+
+  await fs.mkdir(inputDir, { recursive: true });
+  await fs.mkdir(resolvedOutputDir, { recursive: true });
+  await fs.writeFile(path.join(inputDir, 'og-image.og.njk'), 'stub', 'utf8');
+  await fs.writeFile(path.join(resolvedOutputDir, 'manifested.png'), 'from-manifest', 'utf8');
+
+  /** @type {string[]} */
+  const outputFilePathCalls = [];
+
+  class OgImageMock {
+    constructor() {
+      this.resolvedOutputFileName = undefined;
+    }
+
+    async outputFilePath() {
+      outputFilePathCalls.push('called');
+      return path.join(resolvedOutputDir, 'should-not-use.png');
+    }
+
+    async cacheFilePath() {
+      return path.join(resolvedOutputDir, 'manifested.png');
+    }
+
+    async shortcodeOutput() {
+      return `META:${this.resolvedOutputFileName}`;
+    }
+  }
+
+  await plugin(stub.eleventyConfig, {
+    OgImage: OgImageMock,
+    outputDir,
+    previewMode: false,
+    manifest: true,
+    inputFileGlob: '**/*.og.*',
+  });
+
+  for (const fn of stub.listeners['eleventy.directories'] || []) {
+    fn({ input: inputDir, output: siteDir, includes: '_includes', data: '_data' });
+  }
+  for (const fn of stub.listeners['eleventy.config'] || []) {
+    fn({});
+  }
+  for (const fn of stub.listeners['eleventy.extensionmap'] || []) {
+    fn({});
+  }
+
+  const { buildCacheKey } = await import('../src/buildCache.js');
+  const { mergeOptions } = await import('../src/utils/index.js');
+  const merged = mergeOptions({
+    directoriesConfig: { input: inputDir, output: siteDir, includes: '_includes', data: '_data' },
+    pluginOptions: {
+      OgImage: OgImageMock,
+      outputDir,
+      previewMode: false,
+      manifest: true,
+      inputFileGlob: '**/*.og.*',
+    },
+  });
+
+  const joinedInputPath = path.join(inputDir, 'og-image.og.njk');
+  const templateStat = await fs.stat(joinedInputPath);
+  const page = { url: '/manifest-page/' };
+  const ogImageData = {
+    page,
+    eleventy: {},
+    eleventyPluginOgImage: {
+      inputPath: joinedInputPath,
+      width: merged.satoriOptions.width,
+      height: merged.satoriOptions.height,
+      outputFileExtension: merged.outputFileExtension,
+    },
+  };
+  const dataHash = buildCacheKey(joinedInputPath, ogImageData, merged.optionsHash, templateStat.mtimeMs);
+
+  await fs.writeFile(
+    path.join(resolvedOutputDir, '.og-image-manifest.json'),
+    JSON.stringify({
+      '/manifest-page/': { dataHash, outputFileName: 'manifested.png' },
+    }),
+    'utf8',
+  );
+
+  for (const fn of stub.listeners['eleventy.before'] || []) {
+    await fn({ runMode: 'build' });
+  }
+
+  const { fn: ogImageShortcode } = stub.getShortcode();
+  const result = await ogImageShortcode.call({ page, eleventy: {} }, './og-image.og.njk');
+
+  t.is(result, 'META:manifested.png');
+  t.deepEqual(outputFilePathCalls, []);
+
+  for (const fn of stub.listeners['eleventy.after'] || []) {
+    await fn();
+  }
+
+  const saved = JSON.parse(await fs.readFile(path.join(resolvedOutputDir, '.og-image-manifest.json'), 'utf8'));
+  t.is(saved['/manifest-page/'].outputFileName, 'manifested.png');
+});
+
+test.serial('ogImage shortcode uses PNG passthrough when available', async (t) => {
+  const stub = createEleventyConfigStub();
+  const root = await createTmpDir(t);
+
+  const inputDir = path.join(root, 'input');
+  const siteDir = path.join(root, '_site');
+  const outputDir = 'og-images';
+  const resolvedOutputDir = path.join(siteDir, outputDir);
+
+  await fs.mkdir(inputDir, { recursive: true });
+  await fs.mkdir(resolvedOutputDir, { recursive: true });
+  await fs.writeFile(path.join(inputDir, 'og-image.og.njk'), 'stub', 'utf8');
+
+  /** @type {string[]} */
+  const calls = [];
+
+  class OgImageMock {
+    canPassthroughPng() {
+      return true;
+    }
+    async outputFilePath() {
+      return path.join(resolvedOutputDir, 'passthrough.png');
+    }
+    async cacheFilePath() {
+      return path.join(resolvedOutputDir, 'passthrough.png');
+    }
+    async writeToFile(outputFilePath) {
+      calls.push(`write:${outputFilePath}`);
+      await fs.writeFile(outputFilePath, 'png-bytes');
+    }
+    async render() {
+      calls.push('render');
+      return {
+        async toFile() {
+          calls.push('toFile');
+        },
+      };
+    }
+    async shortcodeOutput() {
+      return 'PASSTHROUGH';
+    }
+  }
+
+  await plugin(stub.eleventyConfig, {
+    OgImage: OgImageMock,
+    outputDir,
+    previewMode: false,
+    manifest: false,
+    maxConcurrency: 1,
+    inputFileGlob: '**/*.og.*',
+  });
+
+  for (const fn of stub.listeners['eleventy.directories'] || []) {
+    fn({ input: inputDir, output: siteDir, includes: '_includes', data: '_data' });
+  }
+  for (const fn of stub.listeners['eleventy.before'] || []) {
+    await fn({ runMode: 'build' });
+  }
+
+  const { fn: ogImageShortcode } = stub.getShortcode();
+  const result = await ogImageShortcode.call({ page: { url: '/pass/' }, eleventy: {} }, './og-image.og.njk');
+
+  t.is(result, 'PASSTHROUGH');
+  t.deepEqual(calls, [`write:${path.join(resolvedOutputDir, 'passthrough.png')}`]);
+  t.false(calls.includes('render'));
+});
+
 test.serial('ogImage shortcode catches preview mkdir error (and then throws later)', async (t) => {
   const stub = createEleventyConfigStub();
   const root = await createTmpDir(t);

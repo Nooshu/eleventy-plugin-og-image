@@ -67,5 +67,6 @@ export function mergeOptions({ directoriesConfig, pluginOptions }) {
     ...options,
 
     satoriOptions: mergedSatoriOptions,
+    sharpOptions,
   };
 }

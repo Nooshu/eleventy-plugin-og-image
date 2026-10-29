@@ -46,7 +46,7 @@
     "postinstall": "node scripts/patch-bundled-undici.js",
     "semantic-release": "semantic-release",
     "test": "ava test/**/*.test.js",
-    "test:coverage": "c8 --100 --all --include=.eleventy.js --include=src/**/*.js ava test/**/*.test.js",
+    "test:coverage": "c8 --100 --all --include=.eleventy.js --include=src/**/*.js --include=scripts/**/*.js ava test/**/*.test.js",
     "lint": "eslint .",
     "prettier": "prettier --write .",
     "example": "npx @11ty/eleventy --config=example/.eleventy.js --input=example --output=example/_site",
