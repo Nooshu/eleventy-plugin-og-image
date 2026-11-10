@@ -1,3 +1,18 @@
+## [1.0.2](https://github.com/Nooshu/eleventy-plugin-og-image/compare/v1.0.1...v1.0.2) (2026-11-10)
+
+
+### Bug Fixes
+
+* silence Node `DEP0180` during lint by upgrading `eslint-plugin-n`
+* avoid deprecated `fs.cpSync` in the bundled undici patch script
+
+
+### Chores
+
+* replace `@kiwikilian/eslint-config` / `@kiwikilian/prettier-config` with standard Airbnb Base, `eslint-plugin-n`, Prettier, and an inlined Prettier config
+* pin `eslint` to 8.57.1 for compatibility with the shared Node lint stack
+* add `.c8rc.json` to enforce 100% coverage thresholds
+
 ## [1.0.1](https://github.com/Nooshu/eleventy-plugin-og-image/compare/v1.0.0...v1.0.1) (2026-11-10)
 
 
