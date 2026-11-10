@@ -6,9 +6,36 @@
  * @see https://github.com/npm/cli/issues/10163
  * @see https://github.com/advisories/GHSA-xjj6-f33q-929c
  */
-import { cpSync, existsSync, readFileSync, rmSync } from 'node:fs';
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+} from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+
+/**
+ * @param {string} source
+ * @param {string} destination
+ */
+function copyDirectorySync(source, destination) {
+  mkdirSync(destination, { recursive: true });
+
+  readdirSync(source).forEach((entry) => {
+    const from = path.join(source, entry);
+    const to = path.join(destination, entry);
+
+    if (statSync(from).isDirectory()) {
+      copyDirectorySync(from, to);
+    } else {
+      copyFileSync(from, to);
+    }
+  });
+}
 
 /**
  * @param {{ nestedPath?: string; hoistedPath?: string }} [paths]
@@ -31,7 +58,7 @@ export function patchBundledUndici(paths = {}) {
   }
 
   rmSync(nested, { recursive: true, force: true });
-  cpSync(hoisted, nested, { recursive: true });
+  copyDirectorySync(hoisted, nested);
 
   return 'patched';
 }

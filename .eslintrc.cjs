@@ -30,6 +30,13 @@ module.exports = {
       },
     },
     {
+      files: './example/**',
+      rules: {
+        // Example emoji loader uses global fetch; available on the Node versions we run.
+        'n/no-unsupported-features/node-builtins': ['error', { ignores: ['fetch'] }],
+      },
+    },
+    {
       files: './test/**',
       rules: {
         'import/no-unresolved': ['off'],

@@ -10,9 +10,11 @@ const scriptPath = fileURLToPath(new URL('../scripts/patch-bundled-undici.js', i
 
 async function createPackageDir(root, name, version) {
   const dir = path.join(root, name);
-  await fs.mkdir(dir, { recursive: true });
+  const nestedDir = path.join(dir, 'lib');
+  await fs.mkdir(nestedDir, { recursive: true });
   await fs.writeFile(path.join(dir, 'package.json'), JSON.stringify({ name: 'undici', version }), 'utf8');
   await fs.writeFile(path.join(dir, 'marker.txt'), version, 'utf8');
+  await fs.writeFile(path.join(nestedDir, 'index.js'), `export const version = '${version}';\n`, 'utf8');
 
   return dir;
 }
@@ -51,6 +53,7 @@ test('patchBundledUndici replaces nested package when versions differ', async (t
   t.is(patchBundledUndici({ nestedPath, hoistedPath }), 'patched');
   t.is(JSON.parse(await fs.readFile(path.join(nestedPath, 'package.json'), 'utf8')).version, '6.29.1');
   t.is(await fs.readFile(path.join(nestedPath, 'marker.txt'), 'utf8'), '6.29.1');
+  t.is(await fs.readFile(path.join(nestedPath, 'lib', 'index.js'), 'utf8'), "export const version = '6.29.1';\n");
 });
 
 test('patchBundledUndici uses default node_modules paths', (t) => {
