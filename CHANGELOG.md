@@ -1,3 +1,15 @@
+## [1.0.5](https://github.com/Nooshu/eleventy-plugin-og-image/compare/v1.0.4...v1.0.5) (2026-11-10)
+
+
+### Bug Fixes
+
+* remove `postinstall` lifecycle hook so git installs (e.g. GitHub Pages) no longer trigger a nested full `npm install` of this package's devDependencies
+
+
+### Chores
+
+* keep bundled-deps patch as `npm run patch:bundled-deps`, run before local/CI tests only
+
 ## [1.0.4](https://github.com/Nooshu/eleventy-plugin-og-image/compare/v1.0.3...v1.0.4) (2026-11-10)
 
 
