@@ -1,7 +1,6 @@
-require('@kiwikilian/eslint-config/patch/modern-module-resolution');
-
 module.exports = {
-  extends: ['@kiwikilian/eslint-config/profile/node'],
+  root: true,
+  extends: ['plugin:n/recommended', 'airbnb-base', 'prettier'],
 
   parserOptions: {
     ecmaVersion: 'latest',
@@ -9,6 +8,10 @@ module.exports = {
   },
 
   rules: {
+    'newline-before-return': 'error',
+    'no-param-reassign': ['error', { props: false }],
+    'import/prefer-default-export': 'off',
+    'import/no-default-export': 'error',
     'import/extensions': [
       'error',
       {
@@ -17,7 +20,7 @@ module.exports = {
     ],
     'import/no-extraneous-dependencies': [
       'error',
-      { devDependencies: ['./example/**', './example/.eleventy.js', './test/**'] },
+      { devDependencies: ['./example/**', './example/.eleventy.js', './test/**', './scripts/**'] },
     ],
   },
 
@@ -30,8 +33,9 @@ module.exports = {
       },
     },
     {
-      files: './example/**',
+      files: ['./example/**', './.prettierrc.js'],
       rules: {
+        'import/no-default-export': ['off'],
         // Example emoji loader uses global fetch; available on the Node versions we run.
         'n/no-unsupported-features/node-builtins': ['error', { ignores: ['fetch'] }],
       },

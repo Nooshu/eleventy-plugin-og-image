@@ -1,8 +1,10 @@
-import prettierConfig from '@kiwikilian/prettier-config' with { type: 'json' };
-
 /** @type {import('prettier').Config} */
 export default {
-  ...prettierConfig,
+  semi: true,
+  trailingComma: 'all',
+  singleQuote: true,
+  printWidth: 120,
+  tabWidth: 2,
   plugins: ['prettier-plugin-jsdoc', 'prettier-plugin-jinja-template'],
   overrides: [
     {

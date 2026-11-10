@@ -73,13 +73,15 @@
   "devDependencies": {
     "@11ty/eleventy": "3.1.8",
     "@fontsource/inter": "5.3.0",
-    "@kiwikilian/eslint-config": "1.1.0",
-    "@kiwikilian/prettier-config": "1.0.1",
     "@semantic-release/changelog": "7.0.0",
     "@semantic-release/git": "11.0.1",
     "ava": "8.3.0",
     "c8": "^12.0.0",
     "eslint": "8.57.1",
+    "eslint-config-airbnb-base": "15.0.0",
+    "eslint-config-prettier": "9.1.2",
+    "eslint-plugin-import": "2.32.0",
+    "eslint-plugin-n": "17.24.0",
     "prettier": "3.9.10",
     "prettier-plugin-jinja-template": "2.2.0",
     "prettier-plugin-jsdoc": "1.8.1",
@@ -117,7 +119,6 @@
         "undici": "6.29.1"
       }
     },
-    "sprintf-js": "file:vendor/sprintf-js",
-    "eslint-plugin-n": "17.24.0"
+    "sprintf-js": "file:vendor/sprintf-js"
   }
 }
