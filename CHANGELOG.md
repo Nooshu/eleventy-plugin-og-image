@@ -1,3 +1,10 @@
+## [1.0.4](https://github.com/Nooshu/eleventy-plugin-og-image/compare/v1.0.3...v1.0.4) (2026-11-10)
+
+
+### Bug Fixes
+
+* pin nested `npm` undici lockfile entry to 6.29.1 so Dependabot sees the patched release
+
 ## [1.0.3](https://github.com/Nooshu/eleventy-plugin-og-image/compare/v1.0.2...v1.0.3) (2026-11-10)
 
 
