@@ -1,3 +1,12 @@
+## [1.0.1](https://github.com/Nooshu/eleventy-plugin-og-image/compare/v1.0.0...v1.0.1) (2026-11-10)
+
+
+### Chores
+
+* bump `@11ty/eleventy` from 3.1.7 to 3.1.8
+* bump `ava` from 8.1.2 to 8.3.0
+* bump `eslint` from 10.13.0 to 10.14.0
+
 # [1.0.0](https://github.com/Nooshu/eleventy-plugin-og-image/releases/tag/v1.0.0) (2026-10-29)
 
 
