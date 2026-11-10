@@ -1,10 +1,11 @@
 /**
- * The nested `npm` package (via semantic-release) ships an in-bundle undici
- * that npm overrides cannot replace. Until npm CLI bundles undici >= 6.29.1,
- * copy the overridden hoisted install over the vulnerable bundled copy.
+ * The nested `npm` package (via semantic-release) ships in-bundle copies of
+ * some deps that npm overrides cannot replace. Copy the overridden installs
+ * over those vulnerable bundled copies until npm CLI updates its bundle.
  *
  * @see https://github.com/npm/cli/issues/10163
  * @see https://github.com/advisories/GHSA-xjj6-f33q-929c
+ * @see https://github.com/advisories/GHSA-g3hv-75wg-m249
  */
 import {
   copyFileSync,
@@ -17,6 +18,8 @@ import {
 } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 /**
  * @param {string} source
@@ -38,33 +41,63 @@ function copyDirectorySync(source, destination) {
 }
 
 /**
+ * @param {{ nestedPath: string; sourcePath: string }} paths
+ * @returns {'patched' | 'skipped' | 'already-current'}
+ */
+export function patchBundledPackage({ nestedPath, sourcePath }) {
+  if (!existsSync(nestedPath) || !existsSync(sourcePath)) {
+    return 'skipped';
+  }
+
+  const nestedVersion = JSON.parse(readFileSync(path.join(nestedPath, 'package.json'), 'utf8')).version;
+  const sourceVersion = JSON.parse(readFileSync(path.join(sourcePath, 'package.json'), 'utf8')).version;
+
+  if (nestedVersion === sourceVersion) {
+    return 'already-current';
+  }
+
+  rmSync(nestedPath, { recursive: true, force: true });
+  copyDirectorySync(sourcePath, nestedPath);
+
+  return 'patched';
+}
+
+/**
  * @param {{ nestedPath?: string; hoistedPath?: string }} [paths]
  * @returns {'patched' | 'skipped' | 'already-current'}
  */
 export function patchBundledUndici(paths = {}) {
-  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-  const nested = paths.nestedPath ?? path.join(root, 'node_modules/npm/node_modules/undici');
-  const hoisted = paths.hoistedPath ?? path.join(root, 'node_modules/undici');
+  return patchBundledPackage({
+    nestedPath: paths.nestedPath ?? path.join(root, 'node_modules/npm/node_modules/undici'),
+    sourcePath: paths.hoistedPath ?? path.join(root, 'node_modules/undici'),
+  });
+}
 
-  if (!existsSync(nested) || !existsSync(hoisted)) {
-    return 'skipped';
-  }
+/**
+ * @param {{ nestedPath?: string; sourcePath?: string }} [paths]
+ * @returns {'patched' | 'skipped' | 'already-current'}
+ */
+export function patchBundledMinimatch(paths = {}) {
+  const { sourcePath = path.join(root, 'node_modules/glob/node_modules/minimatch'), nestedPath } = paths;
 
-  const nestedVersion = JSON.parse(readFileSync(path.join(nested, 'package.json'), 'utf8')).version;
-  const hoistedVersion = JSON.parse(readFileSync(path.join(hoisted, 'package.json'), 'utf8')).version;
+  return patchBundledPackage({
+    nestedPath: nestedPath ?? path.join(root, 'node_modules/npm/node_modules/minimatch'),
+    sourcePath,
+  });
+}
 
-  if (nestedVersion === hoistedVersion) {
-    return 'already-current';
-  }
-
-  rmSync(nested, { recursive: true, force: true });
-  copyDirectorySync(hoisted, nested);
-
-  return 'patched';
+/**
+ * @returns {{ undici: string; minimatch: string }}
+ */
+export function patchBundledDeps() {
+  return {
+    undici: patchBundledUndici(),
+    minimatch: patchBundledMinimatch(),
+  };
 }
 
 const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (isMain) {
-  patchBundledUndici();
+  patchBundledDeps();
 }

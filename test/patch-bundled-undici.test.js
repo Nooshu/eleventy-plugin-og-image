@@ -4,7 +4,12 @@ import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { patchBundledUndici } from '../scripts/patch-bundled-undici.js';
+import {
+  patchBundledDeps,
+  patchBundledMinimatch,
+  patchBundledPackage,
+  patchBundledUndici,
+} from '../scripts/patch-bundled-undici.js';
 
 const scriptPath = fileURLToPath(new URL('../scripts/patch-bundled-undici.js', import.meta.url));
 
@@ -12,12 +17,22 @@ async function createPackageDir(root, name, version) {
   const dir = path.join(root, name);
   const nestedDir = path.join(dir, 'lib');
   await fs.mkdir(nestedDir, { recursive: true });
-  await fs.writeFile(path.join(dir, 'package.json'), JSON.stringify({ name: 'undici', version }), 'utf8');
+  await fs.writeFile(path.join(dir, 'package.json'), JSON.stringify({ name: 'pkg', version }), 'utf8');
   await fs.writeFile(path.join(dir, 'marker.txt'), version, 'utf8');
   await fs.writeFile(path.join(nestedDir, 'index.js'), `export const version = '${version}';\n`, 'utf8');
 
   return dir;
 }
+
+test('patchBundledPackage skips when either path is missing', (t) => {
+  t.is(
+    patchBundledPackage({
+      nestedPath: path.join(os.tmpdir(), `missing-nested-${process.pid}`),
+      sourcePath: path.join(os.tmpdir(), `missing-source-${process.pid}`),
+    }),
+    'skipped',
+  );
+});
 
 test('patchBundledUndici skips when either path is missing', (t) => {
   t.is(
@@ -56,8 +71,34 @@ test('patchBundledUndici replaces nested package when versions differ', async (t
   t.is(await fs.readFile(path.join(nestedPath, 'lib', 'index.js'), 'utf8'), "export const version = '6.29.1';\n");
 });
 
+test('patchBundledMinimatch replaces nested package when versions differ', async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'patch-minimatch-diff-'));
+  t.teardown(async () => {
+    await fs.rm(root, { recursive: true, force: true });
+  });
+
+  const nestedPath = await createPackageDir(root, 'nested', '10.2.5');
+  const sourcePath = await createPackageDir(root, 'source', '11.0.6');
+
+  t.is(patchBundledMinimatch({ nestedPath, sourcePath }), 'patched');
+  t.is(JSON.parse(await fs.readFile(path.join(nestedPath, 'package.json'), 'utf8')).version, '11.0.6');
+});
+
+test('patchBundledDeps returns status for undici and minimatch', (t) => {
+  const result = patchBundledDeps();
+
+  t.true(['patched', 'skipped', 'already-current'].includes(result.undici));
+  t.true(['patched', 'skipped', 'already-current'].includes(result.minimatch));
+});
+
 test('patchBundledUndici uses default node_modules paths', (t) => {
   const result = patchBundledUndici();
+
+  t.true(['patched', 'skipped', 'already-current'].includes(result));
+});
+
+test('patchBundledMinimatch uses default node_modules paths', (t) => {
+  const result = patchBundledMinimatch();
 
   t.true(['patched', 'skipped', 'already-current'].includes(result));
 });
