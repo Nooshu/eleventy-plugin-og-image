@@ -1,3 +1,11 @@
+## [1.0.3](https://github.com/Nooshu/eleventy-plugin-og-image/compare/v1.0.2...v1.0.3) (2026-11-10)
+
+
+### Bug Fixes
+
+* force `minimatch@10` to `11.0.6` for GHSA-g3hv-75wg-m249 (globparts amplification DoS)
+* extend postinstall bundled-deps patch to replace nested `npm`'s vulnerable `minimatch` copy
+
 ## [1.0.2](https://github.com/Nooshu/eleventy-plugin-og-image/compare/v1.0.1...v1.0.2) (2026-11-10)
 
 
