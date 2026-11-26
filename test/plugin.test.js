@@ -754,6 +754,73 @@ test.serial('eleventy.after is a no-op when manifest is disabled', async (t) => 
   t.false(manifestExists);
 });
 
+test.serial('ogImage shortcode uses image-only preview on cache hit', async (t) => {
+  const stub = createEleventyConfigStub();
+  const root = await createTmpDir(t);
+
+  const inputDir = path.join(root, 'input');
+  const siteDir = path.join(root, '_site');
+  const outputDir = 'og-images';
+  const previewDir = 'og-images/preview';
+  const resolvedOutputDir = path.join(siteDir, outputDir);
+  const resolvedPreviewDir = path.join(siteDir, previewDir);
+
+  await fs.mkdir(inputDir, { recursive: true });
+  await fs.mkdir(resolvedOutputDir, { recursive: true });
+  await fs.writeFile(path.join(inputDir, 'og-image.og.njk'), 'stub', 'utf8');
+  await fs.writeFile(path.join(resolvedOutputDir, 'out.png'), 'exists', 'utf8');
+
+  /** @type {{ previewHtmlCalls: number; imageOnlyCalls: number }} */
+  const state = { previewHtmlCalls: 0, imageOnlyCalls: 0 };
+
+  class OgImageMock {
+    async outputFilePath() {
+      return path.join(resolvedOutputDir, 'out.png');
+    }
+    async cacheFilePath() {
+      return path.join(resolvedOutputDir, 'out.png');
+    }
+    previewFilePath() {
+      return path.join(resolvedPreviewDir, 'page.png');
+    }
+    async previewHtml() {
+      state.previewHtmlCalls += 1;
+
+      return '<html>full</html>';
+    }
+    async previewHtmlImageOnly() {
+      state.imageOnlyCalls += 1;
+
+      return '<html>image-only</html>';
+    }
+    async shortcodeOutput() {
+      return 'SHORTCODE_OUTPUT';
+    }
+  }
+
+  await plugin(stub.eleventyConfig, {
+    OgImage: OgImageMock,
+    outputDir,
+    previewDir,
+    previewMode: true,
+    inputFileGlob: '**/*.og.*',
+  });
+
+  for (const fn of stub.listeners['eleventy.directories'] || []) {
+    fn({ input: inputDir, output: siteDir, includes: '_includes', data: '_data' });
+  }
+  for (const fn of stub.listeners['eleventy.before'] || []) {
+    await fn({ runMode: 'build' });
+  }
+
+  const { fn: ogImageShortcode } = stub.getShortcode();
+  await ogImageShortcode.call({ page: { url: '/page/' }, eleventy: {} }, './og-image.og.njk');
+
+  t.is(state.previewHtmlCalls, 0);
+  t.is(state.imageOnlyCalls, 1);
+  t.is(await fs.readFile(path.join(resolvedPreviewDir, 'page.png.html'), 'utf8'), '<html>image-only</html>');
+});
+
 test.serial('ogImage shortcode catches preview mkdir error (and then throws later)', async (t) => {
   const stub = createEleventyConfigStub();
   const root = await createTmpDir(t);

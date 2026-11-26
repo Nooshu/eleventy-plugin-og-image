@@ -1,9 +1,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
-/**
- * @typedef {{ dataHash: string; outputFileName: string }} OgImageManifestEntry
- */
+/** @typedef {{ dataHash: string; outputFileName: string }} OgImageManifestEntry */
 
 export class OgImageManifest {
   /** @type {string} */
@@ -12,9 +10,7 @@ export class OgImageManifest {
   /** @type {Record<string, OgImageManifestEntry>} */
   #entries = {};
 
-  /**
-   * @param {string} manifestPath
-   */
+  /** @param {string} manifestPath */
   constructor(manifestPath) {
     this.#manifestPath = manifestPath;
   }
@@ -36,7 +32,7 @@ export class OgImageManifest {
       // Directory may already exist.
     }
 
-    await fs.writeFile(this.#manifestPath, `${JSON.stringify(this.#entries, null, 2)}\n`, 'utf8');
+    await fs.writeFile(this.#manifestPath, `${JSON.stringify(this.#entries)}\n`, 'utf8');
   }
 
   /**

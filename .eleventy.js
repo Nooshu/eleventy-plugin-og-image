@@ -1,12 +1,10 @@
-/* eslint-disable no-empty */
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import { TemplatePath } from '@11ty/eleventy-utils';
 import { mergeOptions } from './src/utils/index.js';
-import { OgImage } from './src/OgImage.js';
-import { BuildCache, buildCacheKey } from './src/buildCache.js';
+import { BuildCache } from './src/buildCache.js';
 import { OgImageManifest } from './src/manifest.js';
 import { ConcurrencyLimiter } from './src/concurrencyLimiter.js';
+import { createOgImageShortcode } from './src/ogImageShortcode.js';
 
 /**
  * @param {import('@11ty/eleventy/src/UserConfig').default} eleventyConfig
@@ -45,14 +43,18 @@ export default async function (eleventyConfig, pluginOptions) {
   const buildCache = new BuildCache();
   /** @type {OgImageManifest | undefined} */
   let manifest;
-  const renderLimiter = new ConcurrencyLimiter(pluginOptions?.maxConcurrency);
+  /** @type {ConcurrencyLimiter} */
+  let renderLimiter = new ConcurrencyLimiter(pluginOptions?.maxConcurrency);
 
   eleventyConfig.on('eleventy.before', async ({ runMode }) => {
     buildCache.clear();
+    renderLimiter = new ConcurrencyLimiter(mergedOptions.maxConcurrency);
 
     try {
       await fs.mkdir(mergedOptions.outputDir, { recursive: true });
-    } catch {}
+    } catch {
+      // outputDir may already exist or be unwritable in edge cases; shortcode fails later if needed.
+    }
 
     if (mergedOptions.manifest) {
       manifest = new OgImageManifest(path.join(mergedOptions.outputDir, '.og-image-manifest.json'));
@@ -67,11 +69,15 @@ export default async function (eleventyConfig, pluginOptions) {
     if (previewEnabled) {
       try {
         await fs.mkdir(mergedOptions.previewDir, { recursive: true });
-      } catch {}
+      } catch {
+        // Preview mkdir failures are non-fatal; shortcode may still create nested dirs.
+      }
     } else {
       try {
         await fs.rm(mergedOptions.previewDir, { recursive: true, force: true });
-      } catch {}
+      } catch {
+        // Preview dir may already be absent.
+      }
     }
   });
 
@@ -85,117 +91,17 @@ export default async function (eleventyConfig, pluginOptions) {
 
   eleventyConfig.addAsyncShortcode(
     'ogImage',
-    /**
-     * @param {string} shortcodeInputPath
-     * @param {Record<string, any>} [data]
-     * @returns {Promise<string>}
-     */
-    async function ogImageShortcode(shortcodeInputPath, data) {
-      if (this.page.url === false) {
-        return null;
-      }
-
-      const { satoriOptions, sharpOptions, ...options } = mergedOptions;
-
-      const joinedInputPath = TemplatePath.standardizeFilePath(path.join(directoriesConfig.input, shortcodeInputPath));
-
-      try {
-        await fs.access(joinedInputPath);
-      } catch {
-        throw new Error(`Could not find file for the \`ogImage\` shortcode, looking for: ${joinedInputPath}`);
-      }
-
-      const templateStat = await fs.stat(joinedInputPath);
-      const templateMtime = templateStat.mtimeMs;
-      const ogImageData = {
-        page: this.page,
-        eleventy: this.eleventy,
-        eleventyPluginOgImage: {
-          inputPath: joinedInputPath,
-          width: satoriOptions.width,
-          height: satoriOptions.height,
-          outputFileExtension: options.outputFileExtension,
-        },
-        ...data,
-      };
-
-      const ogImage = new (pluginOptions.OgImage || OgImage)({
-        inputPath: joinedInputPath,
-        data: ogImageData,
-        options: mergedOptions,
-        templateConfig,
-        extensionMap,
-        buildCache,
-        templateMtime,
-      });
-
-      const dataHash = buildCacheKey(
-        joinedInputPath,
-        ogImageData,
-        mergedOptions.optionsHash,
-        templateMtime,
-      );
-
-      let outputFilePath;
-
-      if (manifest) {
-        const manifestEntry = manifest.get(this.page.url);
-
-        if (manifestEntry?.dataHash === dataHash) {
-          outputFilePath = TemplatePath.standardizeFilePath(
-            path.join(mergedOptions.outputDir, manifestEntry.outputFileName),
-          );
-          ogImage.resolvedOutputFileName = manifestEntry.outputFileName;
-        }
-      }
-
-      if (!outputFilePath) {
-        outputFilePath = await ogImage.outputFilePath();
-      }
-
-      const cacheFilePath = await ogImage.cacheFilePath();
-
-      if (cacheFilePath !== outputFilePath) {
-        try {
-          await fs.copyFile(cacheFilePath, outputFilePath);
-        } catch {}
-      }
-
-      try {
-        await fs.access(outputFilePath);
-      } catch {
-        await renderLimiter.run(async () => {
-          if (ogImage.canPassthroughPng?.()) {
-            await ogImage.writeToFile(outputFilePath);
-          } else {
-            await (await ogImage.render()).toFile(outputFilePath);
-          }
-        });
-
-        eleventyConfig.logger.log(
-          `Writing ${TemplatePath.stripLeadingDotSlash(outputFilePath)} from ${joinedInputPath}`,
-        );
-      }
-
-      if (manifest) {
-        manifest.set(this.page.url, {
-          dataHash,
-          outputFileName: ogImage.resolvedOutputFileName || path.basename(outputFilePath),
-        });
-      }
-
-      if (previewEnabled) {
-        const previewFilePath = ogImage.previewFilePath();
-
-        try {
-          await fs.mkdir(path.dirname(previewFilePath), { recursive: true });
-        } catch {}
-
-        await fs.copyFile(outputFilePath, previewFilePath);
-        await fs.writeFile(`${previewFilePath}.html`, await ogImage.previewHtml());
-      }
-
-      return ogImage.shortcodeOutput();
-    },
+    createOgImageShortcode({
+      eleventyConfig,
+      getDirectoriesConfig: () => directoriesConfig,
+      getMergedOptions: () => mergedOptions,
+      getTemplateConfig: () => templateConfig,
+      getExtensionMap: () => extensionMap,
+      buildCache,
+      getManifest: () => manifest,
+      isPreviewEnabled: () => previewEnabled,
+      getRenderLimiter: () => renderLimiter,
+      pluginOptions,
+    }),
   );
 }

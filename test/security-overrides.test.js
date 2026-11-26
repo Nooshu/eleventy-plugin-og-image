@@ -73,19 +73,15 @@ test('minimatch v10 line is overridden to the patched 11.x release', (t) => {
 });
 
 test('OG image render remains stable with security overrides applied', async (t) => {
-  const ogImage = new OgImage(testConstructor);
+  const golden = JSON.parse(readFileSync(path.join(rootDir, 'test/fixtures/image-regression.json'), 'utf8'));
+  const ogImage = new OgImage({
+    ...testConstructor,
+    data: { page: { url: golden.pageUrl } },
+  });
   const pngBuffer = await ogImage.pngBuffer();
   const digest = createHash('sha256').update(pngBuffer).digest('hex');
 
   t.true(pngBuffer instanceof Buffer);
   t.true(pngBuffer.length > 0);
-  t.regex(digest, /^[a-f0-9]{64}$/);
-
-  // Deterministic output for the fixture template
-  t.is(
-    digest,
-    createHash('sha256')
-      .update(await new OgImage(testConstructor).pngBuffer())
-      .digest('hex'),
-  );
+  t.is(digest, golden.pngSha256);
 });

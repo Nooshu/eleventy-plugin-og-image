@@ -111,6 +111,9 @@ The following options can be passed when adding the plugin:
 | `previewMode`         | `auto \| boolean`                                                                                        | `auto`                                    | Enable/disable preview mode.                                                               |
 | `previewDir`          | `string`                                                                                                 | `${outputDir}/preview`                    | Directory used for preview during `watch` or `serve`. Relative to eleventy `output`.       |
 | `urlPath`             | `string`                                                                                                 | `${outputDir}`                            | URL-prefix which will be used in returned meta-tags.                                       |
+| `slugStrategy`        | `contentHash \| pageUrl`                                                                                 | `contentHash`                             | How default output file slugs are derived. Prefer `pageUrl` for stable filenames.          |
+| `manifest`            | `boolean`                                                                                                | `true`                                    | Persist output filenames + data hashes under `outputDir` for incremental builds.           |
+| `maxConcurrency`      | `number`                                                                                                 | `undefined`                               | Cap parallel OG image renders. Omit for unlimited concurrency.                             |
 | `outputFileSlug`      | `function`                                                                                               | [See source](src/utils/mergeOptions.js)   | Generation of the output file slug, must be url safe and exclude the file extension.       |
 | `shortcodeOutput`     | `function`                                                                                               | [See source](src/utils/mergeOptions.js)   | Change the HTML returned by the shortcode in pages.                                        |
 | `satoriOptions`       | [satori options](https://github.com/search?q=repo:vercel/satori+%22export+type+SatoriOptions%22&type=code) | `{ width: 1200, height: 630, fonts: [] }` | If an OG-image-template contains text, it's **required** to load a font ([example](#esm)). |
@@ -119,11 +122,11 @@ The following options can be passed when adding the plugin:
 
 ## Preview Mode
 
-The previewMode is intended to ease the styling of OG images. When `previewMode` is set to `auto` (default) the OG images are also copied into the `previewDir` during development with `watch` or `serve`. The files are named by the url slug of the pages they are generated from. Next to it there is a HTML placed which shows the generated HTML, SVG and output image. The `previewDir` will be deleted during a production build. When not actively working on OG images, performance can be improved by disabling `previewMode`.
+The previewMode is intended to ease the styling of OG images. When `previewMode` is set to `auto` (default) the OG images are also copied into the `previewDir` during development with `watch` or `serve`. The files are named by the url slug of the pages they are generated from. Next to it there is a HTML placed which shows the generated HTML, SVG and output image when an image was freshly rendered; cache hits write a lighter image-only preview page. The `previewDir` will be deleted during a production build. When not actively working on OG images, performance can be improved by disabling `previewMode`.
 
 ## Caching
 
-For better performance OG images are cached based on a hash from generated HTML and output options. If the file already exists, further transformations are skipped.
+For better performance OG images are cached based on a stable hash of the template path, options, template mtime, `page` data, shortcode data, and plugin dimensions (volatile `eleventy` runtime fields are ignored). If the file already exists and the manifest hash matches, further transformations are skipped. Updating the cache-key shape may invalidate older `.og-image-manifest.json` entries once; the next build regenerates those images.
 
 ## Advanced Usage
 

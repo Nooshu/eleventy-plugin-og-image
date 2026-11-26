@@ -12,6 +12,7 @@ import { TemplatePath } from '@11ty/eleventy-utils';
 import path from 'node:path';
 import url from 'node:url';
 import { buildCacheKey } from './buildCache.js';
+import { computeOptionsHash } from './utils/computeOptionsHash.js';
 
 /** @implements {import('eleventy-plugin-og-image').OgImage} */
 export class OgImage {
@@ -63,8 +64,9 @@ export class OgImage {
    * @param {import('@11ty/eleventy/src/EleventyExtensionMap').default} [extensionMap]
    * @param {import('./buildCache.js').BuildCache} [buildCache]
    * @param {number} [templateMtime]
+   * @param {string} [cacheKey]
    */
-  constructor({ inputPath, data, options, templateConfig, extensionMap, buildCache, templateMtime }) {
+  constructor({ inputPath, data, options, templateConfig, extensionMap, buildCache, templateMtime, cacheKey }) {
     this.inputPath = inputPath;
     this.data = data;
     this.options = options;
@@ -72,17 +74,13 @@ export class OgImage {
     this.extensionMap = extensionMap;
     this.buildCache = buildCache;
     this.templateMtime = templateMtime;
+    this.#cacheKey = cacheKey;
   }
 
   /** @returns {string} */
   getCacheKey() {
     if (!this.#cacheKey) {
-      this.#cacheKey = buildCacheKey(
-        this.inputPath,
-        this.data,
-        this.options.optionsHash ?? '',
-        this.templateMtime,
-      );
+      this.#cacheKey = buildCacheKey(this.inputPath, this.data, this.options.optionsHash ?? '', this.templateMtime);
     }
 
     return this.#cacheKey;
@@ -194,8 +192,6 @@ export class OgImage {
     if (this.options.optionsHash !== undefined) {
       hash.update(this.options.optionsHash);
     } else {
-      const { computeOptionsHash } = await import('./utils/computeOptionsHash.js');
-
       hash.update(computeOptionsHash(this.options.satoriOptions, this.options.sharpOptions));
     }
 
@@ -247,6 +243,28 @@ export class OgImage {
         `${this.data.page.url.replace(/\/$/, '') || 'index'}.${this.options.outputFileExtension}`,
       ),
     );
+  }
+
+  /**
+   * Lightweight preview that only references the output image (no HTML/SVG re-render).
+   *
+   * @returns {Promise<string>}
+   */
+  async previewHtmlImageOnly() {
+    return `<html>
+<head>
+  <title>OG Image: ${this.data.page.url}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+</head>
+<body>
+<img
+  alt="OG Image: ${this.data.page.url}"
+  width="${this.options.satoriOptions.width}"
+  height="${this.options.satoriOptions.height}"
+  src="${await this.outputUrl()}"/>
+</body>
+</html>
+`;
   }
 
   /** @returns {Promise<string>} */

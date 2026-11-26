@@ -1,7 +1,7 @@
 import test from 'ava';
 import { RenderPlugin } from '@11ty/eleventy';
 import { OgImage } from '../src/OgImage.js';
-import { BuildCache, buildCacheKey } from '../src/buildCache.js';
+import { BuildCache, buildCacheKey, stableCachePayload } from '../src/buildCache.js';
 import { testConstructor } from './utils/testConstructor.js';
 
 test('build cache deduplicates html rendering across OgImage instances', async (t) => {
@@ -37,6 +37,68 @@ test('buildCacheKey includes template mtime when provided', (t) => {
   t.not(
     buildCacheKey('./input.og.njk', data, 'options-hash'),
     buildCacheKey('./input.og.njk', data, 'options-hash', 123),
+  );
+});
+
+test('stableCachePayload ignores volatile eleventy fields but keeps page', (t) => {
+  const payload = stableCachePayload({
+    page: { url: '/post/', title: 'Post' },
+    eleventy: { env: { runMode: 'serve' }, version: '3.1.8' },
+    eleventyPluginOgImage: {
+      inputPath: './a.og.njk',
+      width: 1200,
+      height: 630,
+      outputFileExtension: 'png',
+      ignored: true,
+    },
+    title: 'Hello',
+  });
+
+  t.deepEqual(payload, {
+    page: { url: '/post/', title: 'Post' },
+    eleventyPluginOgImage: {
+      inputPath: './a.og.njk',
+      width: 1200,
+      height: 630,
+      outputFileExtension: 'png',
+    },
+    title: 'Hello',
+  });
+
+  t.deepEqual(stableCachePayload(null), {
+    page: undefined,
+    eleventyPluginOgImage: undefined,
+  });
+});
+
+test('buildCacheKey ignores volatile eleventy runtime fields', (t) => {
+  const base = {
+    page: { url: '/same/', title: 'Same' },
+    eleventyPluginOgImage: {
+      inputPath: './a.og.njk',
+      width: 1200,
+      height: 630,
+      outputFileExtension: 'png',
+    },
+  };
+
+  t.is(
+    buildCacheKey('./a.og.njk', { ...base, eleventy: { runMode: 'serve' } }, 'opts', 1),
+    buildCacheKey('./a.og.njk', { ...base, eleventy: { runMode: 'build' } }, 'opts', 1),
+  );
+});
+
+test('buildCacheKey changes when page content fields change', (t) => {
+  const pluginMeta = {
+    inputPath: './a.og.njk',
+    width: 1200,
+    height: 630,
+    outputFileExtension: 'png',
+  };
+
+  t.not(
+    buildCacheKey('./a.og.njk', { page: { url: '/same/', title: 'A' }, eleventyPluginOgImage: pluginMeta }, 'opts', 1),
+    buildCacheKey('./a.og.njk', { page: { url: '/same/', title: 'B' }, eleventyPluginOgImage: pluginMeta }, 'opts', 1),
   );
 });
 

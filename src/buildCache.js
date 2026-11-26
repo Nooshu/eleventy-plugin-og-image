@@ -1,9 +1,7 @@
 import crypto from 'node:crypto';
 import { sortObject } from './utils/sortObject.js';
 
-/**
- * @typedef {{ html?: string; svg?: string; pngBuffer?: Buffer }} BuildCacheEntry
- */
+/** @typedef {{ html?: string; svg?: string; pngBuffer?: Buffer }} BuildCacheEntry */
 
 /**
  * @param {unknown} value
@@ -38,6 +36,30 @@ function serializeValue(value) {
 }
 
 /**
+ * Builds a stable hashing payload from shortcode/render data. Keeps `page` (templates often read `page.title` etc.) and
+ * user shortcode data, plus an allowlisted plugin slice. Drops volatile `eleventy` runtime.
+ *
+ * @param {Record<string, any>} [data]
+ * @returns {Record<string, any>}
+ */
+export function stableCachePayload(data = {}) {
+  const { page, eleventy: _eleventy, eleventyPluginOgImage, ...userData } = data || {};
+
+  return {
+    page,
+    eleventyPluginOgImage: eleventyPluginOgImage
+      ? {
+          inputPath: eleventyPluginOgImage.inputPath,
+          width: eleventyPluginOgImage.width,
+          height: eleventyPluginOgImage.height,
+          outputFileExtension: eleventyPluginOgImage.outputFileExtension,
+        }
+      : undefined,
+    ...userData,
+  };
+}
+
+/**
  * @param {string} inputPath
  * @param {Record<string, any>} data
  * @param {string} optionsHash
@@ -49,7 +71,7 @@ export function buildCacheKey(inputPath, data, optionsHash, templateMtime) {
 
   hash.update(inputPath);
   hash.update(optionsHash);
-  hash.update(JSON.stringify(sortObject(serializeValue(data) || {})));
+  hash.update(JSON.stringify(sortObject(serializeValue(stableCachePayload(data)))));
 
   if (templateMtime !== undefined) {
     hash.update(String(templateMtime));

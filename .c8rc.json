@@ -5,13 +5,15 @@
   "statements": 100,
   "functions": 100,
   "branches": 100,
-  "include": [".eleventy.js", "src/**/*.js", "scripts/**/*.js"],
+  "include": [".eleventy.js", "src/**/*.js", "scripts/patch-bundled-undici.js"],
   "exclude": [
     "coverage/**",
     "example/**",
     "test/**",
     "vendor/**",
     "node_modules/**",
+    "scripts/release.js",
+    "scripts/lib/**",
     ".prettierrc.js"
   ],
   "reporter": ["text", "text-summary"]

@@ -1,0 +1,15 @@
+{
+  "htmlSha256": "bf895fc5389ed9a5129edb2a38c36fd847069b4a001aea7ae3eaf8686e2f9569",
+  "svgSha256": "1ff63672f82ee231f59df7539fa24d1e69f517d59b86f5f3ccb412e3c31ea759",
+  "pngSha256": "ad262b8227e49cdc09805b9debdc883c30e6bc26eace0588d0bf66392e63e283",
+  "jpegSha256": "8b7026c96b02a96736a2ca4dadeae0de43fd1e757381ffc949cc8bf1e7685e62",
+  "width": 1200,
+  "height": 630,
+  "format": "png",
+  "jpegWidth": 1200,
+  "jpegHeight": 630,
+  "jpegFormat": "jpeg",
+  "jpegQuality": 80,
+  "contentHashSlug": "759d60a8",
+  "pageUrl": "example/url"
+}

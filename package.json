@@ -44,6 +44,7 @@
   },
   "scripts": {
     "patch:bundled-deps": "node scripts/patch-bundled-undici.js",
+    "release": "node scripts/release.js",
     "semantic-release": "semantic-release",
     "test": "npm run patch:bundled-deps && c8 ava test/**/*.test.js",
     "test:coverage": "npm run test",

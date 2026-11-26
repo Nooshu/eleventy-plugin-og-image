@@ -1,6 +1,17 @@
 import path from 'node:path';
 import { computeOptionsHash, prepareOptionsForHash } from './computeOptionsHash.js';
 import { pageUrlSlug } from './pageUrlSlug.js';
+import {
+  DEFAULT_HASH_LENGTH,
+  DEFAULT_INPUT_FILE_GLOB,
+  DEFAULT_MANIFEST,
+  DEFAULT_OUTPUT_DIR,
+  DEFAULT_OUTPUT_FILE_EXTENSION,
+  DEFAULT_PREVIEW_MODE,
+  DEFAULT_SATORI_HEIGHT,
+  DEFAULT_SATORI_WIDTH,
+  DEFAULT_SLUG_STRATEGY,
+} from './defaults.js';
 
 /**
  * Merges the plugin options with defaults
@@ -17,19 +28,19 @@ export function mergeOptions({ directoriesConfig, pluginOptions }) {
     OgImage,
     satoriOptions,
     sharpOptions,
-    slugStrategy = 'contentHash',
+    slugStrategy = DEFAULT_SLUG_STRATEGY,
     outputFileSlug,
-    manifest = true,
+    manifest = DEFAULT_MANIFEST,
     maxConcurrency,
     ...options
   } = pluginOptions || {};
 
   const eleventyOutput = directoriesConfig ? directoriesConfig.output : '';
-  const joinedOutputDir = path.join(eleventyOutput, outputDir || 'og-images');
+  const joinedOutputDir = path.join(eleventyOutput, outputDir || DEFAULT_OUTPUT_DIR);
 
   const mergedSatoriOptions = {
-    width: 1200,
-    height: 630,
+    width: DEFAULT_SATORI_WIDTH,
+    height: DEFAULT_SATORI_HEIGHT,
     fonts: [],
     ...satoriOptions,
   };
@@ -37,13 +48,13 @@ export function mergeOptions({ directoriesConfig, pluginOptions }) {
   const preparedOptionsForHash = prepareOptionsForHash(mergedSatoriOptions, sharpOptions);
 
   return {
-    inputFileGlob: '**/*.og.*',
-    hashLength: 8,
-    outputFileExtension: 'png',
+    inputFileGlob: DEFAULT_INPUT_FILE_GLOB,
+    hashLength: DEFAULT_HASH_LENGTH,
+    outputFileExtension: DEFAULT_OUTPUT_FILE_EXTENSION,
     outputDir: joinedOutputDir,
-    previewMode: 'auto',
+    previewMode: DEFAULT_PREVIEW_MODE,
     previewDir: path.join(...(previewDir ? [eleventyOutput, previewDir] : [joinedOutputDir, 'preview'])),
-    urlPath: urlPath || outputDir || 'og-images',
+    urlPath: urlPath || outputDir || DEFAULT_OUTPUT_DIR,
     slugStrategy,
     manifest,
     maxConcurrency,

@@ -46,5 +46,11 @@ module.exports = {
         'import/no-unresolved': ['off'],
       },
     },
+    {
+      files: ['./scripts/release.js'],
+      rules: {
+        'no-console': 'off',
+      },
+    },
   ],
 };

@@ -178,6 +178,29 @@ test('previewHtml includes rendered html, svg, and image tag', async (t) => {
   t.regex(previewHtml, new RegExp(`src="/og-images/${HASH}\\.png"`));
 });
 
+test('previewHtmlImageOnly references image without rendering html or svg', async (t) => {
+  const ogImage = new OgImage({ ...testConstructor, data: { page: { url: PAGE_URL } } });
+  ogImage.resolvedOutputFileName = `${HASH}.png`;
+
+  const previewHtml = await ogImage.previewHtmlImageOnly();
+
+  t.regex(previewHtml, new RegExp(`<title>OG Image: ${PAGE_URL}</title>`));
+  t.regex(previewHtml, new RegExp(`src="/og-images/${HASH}\\.png"`));
+  t.false(previewHtml.includes('eleventy-plugin-og-image-html'));
+  t.falsy(ogImage.results.html);
+  t.falsy(ogImage.results.svg);
+});
+
+test('constructor cacheKey short-circuits getCacheKey', (t) => {
+  const ogImage = new OgImage({
+    ...testConstructor,
+    data: { page: { url: '/cache-key/' } },
+    cacheKey: 'precomputed-key',
+  });
+
+  t.is(ogImage.getCacheKey(), 'precomputed-key');
+});
+
 test('hash returns hash', async (t) => {
   const ogImage = new OgImage(testConstructor);
 

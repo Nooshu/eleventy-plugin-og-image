@@ -24,6 +24,8 @@ export interface OgImage {
     pngBuffer?: Buffer;
   };
 
+  getCacheKey(): string;
+
   html(): Promise<string>;
 
   svg(): Promise<string>;
@@ -51,6 +53,8 @@ export interface OgImage {
   shortcodeOutput(): Promise<string>;
 
   previewFilePath(): string;
+
+  previewHtmlImageOnly(): Promise<string>;
 
   previewHtml(): Promise<string>;
 }
