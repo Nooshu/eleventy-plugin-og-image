@@ -45,8 +45,8 @@
   "scripts": {
     "patch:bundled-deps": "node scripts/patch-bundled-undici.js",
     "semantic-release": "semantic-release",
-    "test": "npm run patch:bundled-deps && ava test/**/*.test.js",
-    "test:coverage": "npm run patch:bundled-deps && c8 ava test/**/*.test.js",
+    "test": "npm run patch:bundled-deps && c8 ava test/**/*.test.js",
+    "test:coverage": "npm run test",
     "lint": "eslint .",
     "prettier": "prettier --write .",
     "example": "npx @11ty/eleventy --config=example/.eleventy.js --input=example --output=example/_site",

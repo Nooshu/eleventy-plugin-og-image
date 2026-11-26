@@ -49,6 +49,29 @@ test('undici installs are patched to 6.29.1 (including npm-bundled copy)', (t) =
     });
 });
 
+test('minimatch v10 line is overridden to the patched 11.x release', (t) => {
+  const lockfile = JSON.parse(readFileSync(path.join(rootDir, 'package-lock.json'), 'utf8'));
+  const minimatchEntries = Object.entries(lockfile.packages).filter(
+    ([lockPath]) => lockPath.endsWith('/minimatch') || lockPath === 'node_modules/minimatch',
+  );
+
+  t.true(minimatchEntries.length > 0);
+
+  const vulnerableV10 = minimatchEntries.filter(([, meta]) => String(meta.version).startsWith('10.'));
+  t.deepEqual(vulnerableV10, []);
+
+  const patchedV11 = minimatchEntries.filter(([, meta]) => {
+    const [major, minor, patch] = String(meta.version).split('.').map(Number);
+
+    return major === 11 && (minor > 0 || patch >= 1);
+  });
+  t.true(patchedV11.length > 0);
+
+  const nestedMinimatch = path.join(rootDir, 'node_modules/npm/node_modules/minimatch/package.json');
+  t.true(existsSync(nestedMinimatch));
+  t.regex(JSON.parse(readFileSync(nestedMinimatch, 'utf8')).version, /^11\./);
+});
+
 test('OG image render remains stable with security overrides applied', async (t) => {
   const ogImage = new OgImage(testConstructor);
   const pngBuffer = await ogImage.pngBuffer();
@@ -59,5 +82,10 @@ test('OG image render remains stable with security overrides applied', async (t)
   t.regex(digest, /^[a-f0-9]{64}$/);
 
   // Deterministic output for the fixture template
-  t.is(digest, createHash('sha256').update(await new OgImage(testConstructor).pngBuffer()).digest('hex'));
+  t.is(
+    digest,
+    createHash('sha256')
+      .update(await new OgImage(testConstructor).pngBuffer())
+      .digest('hex'),
+  );
 });

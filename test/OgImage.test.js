@@ -291,3 +291,52 @@ test('updateBuildCache is a no-op without a build cache', async (t) => {
 
   t.is(typeof (await ogImage.html()), 'string');
 });
+
+test('html svg and pngBuffer reuse cached instance results', async (t) => {
+  const ogImage = new OgImage(testConstructor);
+
+  const html1 = await ogImage.html();
+  const html2 = await ogImage.html();
+  const svg1 = await ogImage.svg();
+  const svg2 = await ogImage.svg();
+
+  t.is(html1, html2);
+  t.is(svg1, svg2);
+  t.regex(svg1, /^<svg/);
+});
+
+test('hash length follows options.hashLength', async (t) => {
+  const ogImage = new OgImage({
+    ...testConstructor,
+    options: {
+      ...testConstructor.options,
+      hashLength: 12,
+    },
+  });
+
+  const hash = await ogImage.hash();
+
+  t.is(hash.length, 12);
+  t.regex(hash, /^[a-f0-9]{12}$/);
+});
+
+test('canPassthroughPng is false for non-png extensions', (t) => {
+  const ogImage = new OgImage({
+    ...testConstructor,
+    options: {
+      ...testConstructor.options,
+      outputFileExtension: 'webp',
+      sharpOptions: undefined,
+    },
+  });
+
+  t.false(ogImage.canPassthroughPng());
+});
+
+test('templateMtime changes the cache key', (t) => {
+  const data = { page: { url: '/mtime/' } };
+  const first = new OgImage({ ...testConstructor, data, templateMtime: 1 });
+  const second = new OgImage({ ...testConstructor, data, templateMtime: 2 });
+
+  t.not(first.getCacheKey(), second.getCacheKey());
+});
