@@ -1,3 +1,8 @@
+## [1.1.0](https://github.com/Nooshu/eleventy-plugin-og-image/compare/v1.0.5...v1.1.0) (2026-11-26)
+
+
+* Speed and maintainability: stable cache keys, shortcode extract, image-only preview on cache hits, compact manifests, defaults module, and SemVer release automation with golden image-regression gates.
+
 ## [1.0.5](https://github.com/Nooshu/eleventy-plugin-og-image/compare/v1.0.4...v1.0.5) (2026-11-10)
 
 
