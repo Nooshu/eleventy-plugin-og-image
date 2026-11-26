@@ -67,8 +67,19 @@ function collectNotes(previousVersion, explicitNotes) {
   }
 }
 
+function originNameWithOwner() {
+  const remoteUrl = run('git', ['remote', 'get-url', 'origin']).trim();
+  const match = remoteUrl.match(/[:/]([^/]+\/[^/.]+)(?:\.git)?$/);
+
+  if (!match) {
+    throw new Error(`Could not parse origin remote URL: ${remoteUrl}`);
+  }
+
+  return match[1];
+}
+
 function createGitHubRelease(tag, notes) {
-  const nameWithOwner = run('gh', ['repo', 'view', '--json', 'nameWithOwner', '-q', '.nameWithOwner']).trim();
+  const nameWithOwner = originNameWithOwner();
   const releaseBody = notes.length > 0 ? notes.map((note) => `- ${note}`).join('\n') : `Release ${tag}`;
   const payload = JSON.stringify({
     tag_name: tag,
